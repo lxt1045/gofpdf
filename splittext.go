@@ -1,7 +1,9 @@
 package gofpdf
 
 import (
+	"fmt"
 	"math"
+
 	//	"strings"
 	"unicode"
 )
@@ -39,8 +41,8 @@ func (f *Fpdf) SplitText(txt string, w float64) (lines []string) {
 				i = sep + 1
 			}
 			lines = append(lines, string(s[j:sep]))
+			j = sep
 			sep = -1
-			j = i
 			l = 0
 		} else {
 			i++
@@ -49,5 +51,6 @@ func (f *Fpdf) SplitText(txt string, w float64) (lines []string) {
 	if i != j {
 		lines = append(lines, string(s[j:i]))
 	}
+	fmt.Printf("txt: %s, lines:%+v", txt, lines)
 	return lines
 }

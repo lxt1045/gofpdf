@@ -2787,6 +2787,10 @@ func (f *Fpdf) MultiCell(w, h float64, txtStr, borderStr, alignStr string, fill 
 // write outputs text in flowing mode
 func (f *Fpdf) write(h float64, txtStr string, link int, linkStr string) {
 	// dbg("Write")
+	if strings.HasPrefix(txtStr, "5.2") {
+		fmt.Println("txtStr", txtStr)
+	}
+	fmt.Println("txtStr", txtStr)
 	cw := f.currentFont.Cw
 	w := f.w - f.rMargin - f.x
 	wmax := (w - 2*f.cMargin) * 1000 / f.fontSize
