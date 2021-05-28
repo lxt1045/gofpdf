@@ -38,11 +38,16 @@ func (f *Fpdf) SplitText(txt string, w float64) (lines []string) {
 				}
 				sep = i
 			} else {
-				i = sep + 1
+				if unicode.IsSpace(c) {
+					i = sep + 1
+				} else {
+					i = sep
+				}
 			}
 			lines = append(lines, string(s[j:sep]))
-			j = sep
+			// j = sep
 			sep = -1
+			j = i
 			l = 0
 		} else {
 			i++
@@ -51,6 +56,6 @@ func (f *Fpdf) SplitText(txt string, w float64) (lines []string) {
 	if i != j {
 		lines = append(lines, string(s[j:i]))
 	}
-	fmt.Printf("txt: %s, lines:%+v", txt, lines)
+	fmt.Printf("txt:%s, lines:%+v\n", txt, lines)
 	return lines
 }
