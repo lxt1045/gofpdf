@@ -2807,12 +2807,7 @@ func (f *Fpdf) write(h float64, txtStr string, link int, linkStr string) {
 	nl := 1   //表示当前是第几行
 	for i < nb {
 		// Get next character; c表示正在处理的字符
-		var c rune
-		if f.isCurrentUTF8 {
-			c = []rune(s)[i]
-		} else {
-			c = rune(byte(s[i]))
-		}
+		c := s[i]
 		if c == '\n' {
 			// Explicit line break; 显式换行
 			f.CellFormat(w, h, string([]rune(s)[j:i]), "", 2, "", false, link, linkStr)
