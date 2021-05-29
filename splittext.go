@@ -36,7 +36,11 @@ func (f *Fpdf) SplitText(txt string, w float64) (lines []string) {
 				}
 				sep = i
 			} else {
-				i = sep + 1
+				if unicode.IsSpace(s[sep]) { //如果是空格，换行后可以忽略该字符；其他字符不能忽略。
+					i = sep + 1
+				} else {
+					i = sep
+				}
 			}
 			lines = append(lines, string(s[j:sep]))
 			sep = -1

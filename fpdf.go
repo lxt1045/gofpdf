@@ -40,6 +40,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 )
 
 var gl struct {
@@ -2787,27 +2788,25 @@ func (f *Fpdf) MultiCell(w, h float64, txtStr, borderStr, alignStr string, fill 
 // write outputs text in flowing mode
 func (f *Fpdf) write(h float64, txtStr string, link int, linkStr string) {
 	// dbg("Write")
-	cw := f.currentFont.Cw
-	w := f.w - f.rMargin - f.x
-	wmax := (w - 2*f.cMargin) * 1000 / f.fontSize
-	s := strings.Replace(txtStr, "\r", "", -1)
-	var nb int
+	cw := f.currentFont.Cw                        //字宽数组(每个字的宽度不一样)
+	w := f.w - f.rMargin - f.x                    //w: 当前行还剩多少的宽度
+	wmax := (w - 2*f.cMargin) * 1000 / f.fontSize // 可以用于写字的宽度(除去左右的边缘\余量);1000/f.fontSize :表示一种单位吧
+	txt := strings.Replace(txtStr, "\r", "", -1)
+	s := []rune(txt) // Return slice of UTF-8 runes
+	nb := len(s)
 	if f.isCurrentUTF8 {
-		nb = len([]rune(s))
-		if nb == 1 && s == " " {
-			f.x += f.GetStringWidth(s)
+		if nb == 1 && txt == " " {
+			f.x += f.GetStringWidth(txt)
 			return
 		}
-	} else {
-		nb = len(s)
 	}
-	sep := -1
-	i := 0
-	j := 0
-	l := 0.0
-	nl := 1
+	sep := -1 //表示最近的空格的位置,-1表示没有; 主要是因为一行文字的正确的排版需要依赖空格作为断行
+	i := 0    //表示当前扫描到的位置
+	j := 0    //表示还未书写的文字的起始位置
+	l := 0.0  //表示当前扫表过的文字已经占用了多少的长度
+	nl := 1   //表示当前是第几行
 	for i < nb {
-		// Get next character
+		// Get next character; c表示正在处理的字符
 		var c rune
 		if f.isCurrentUTF8 {
 			c = []rune(s)[i]
@@ -2815,12 +2814,8 @@ func (f *Fpdf) write(h float64, txtStr string, link int, linkStr string) {
 			c = rune(byte(s[i]))
 		}
 		if c == '\n' {
-			// Explicit line break
-			if f.isCurrentUTF8 {
-				f.CellFormat(w, h, string([]rune(s)[j:i]), "", 2, "", false, link, linkStr)
-			} else {
-				f.CellFormat(w, h, s[j:i], "", 2, "", false, link, linkStr)
-			}
+			// Explicit line break; 显式换行
+			f.CellFormat(w, h, string([]rune(s)[j:i]), "", 2, "", false, link, linkStr)
 			i++
 			sep = -1
 			j = i
@@ -2833,38 +2828,36 @@ func (f *Fpdf) write(h float64, txtStr string, link int, linkStr string) {
 			nl++
 			continue
 		}
-		if c == ' ' {
-			sep = i
+		if unicode.IsSpace(c) || isChinese(c) /* c == ' ' */ {
+			sep = i //最近的空格的位置
 		}
-		l += float64(cw[int(c)])
+		l += float64(cw[int(c)]) //l: 表示当前扫表过的文字已经占用了多少的长度
 		if l > wmax {
-			// Automatic line break
+			// Automatic line break; 在宽度余量用完之后,强制换行; 注意: 此时已经扫描的文字刚好超过了一个文字!!
 			if sep == -1 {
-				if f.x > f.lMargin {
-					// Move to next line
-					f.x = f.lMargin
-					f.y += h
-					w = f.w - f.rMargin - f.x
-					wmax = (w - 2*f.cMargin) * 1000 / f.fontSize
-					i++
+				if f.x > f.lMargin { //f.lMargin 表示行首距离左边边缘的距离
+					// Move to next line; 如果不是行首,则使用新的一行来写字,以保证 一个单词 的完整性
+					f.x = f.lMargin                              //换行,操作起始坐标: x
+					f.y += h                                     //换行,操作起始坐标: y
+					w = f.w - f.rMargin - f.x                    //w: 当前行还剩多少的宽度
+					wmax = (w - 2*f.cMargin) * 1000 / f.fontSize // 可以用于写字的宽度(出去左右的边缘\余量)
+					i++                                          //把当前的字加入行,一起写
 					nl++
 					continue
 				}
-				if i == j {
+				if i == j { //这是因为当前行剩下的可写宽度已经写不下一个字了
 					i++
 				}
-				if f.isCurrentUTF8 {
-					f.CellFormat(w, h, string([]rune(s)[j:i]), "", 2, "", false, link, linkStr)
-				} else {
-					f.CellFormat(w, h, s[j:i], "", 2, "", false, link, linkStr)
-				}
+				f.CellFormat(w, h, string([]rune(s)[j:i]), "", 2, "", false, link, linkStr)
 			} else {
-				if f.isCurrentUTF8 {
-					f.CellFormat(w, h, string([]rune(s)[j:sep]), "", 2, "", false, link, linkStr)
+				// 如果最近扫描的文字中存在空格,则先将空格位置前的文字先写出来;
+				f.CellFormat(w, h, string([]rune(s)[j:sep]), "", 2, "", false, link, linkStr)
+				// i = sep + 1 //从空格后继续扫描\处理
+				if unicode.IsSpace(s[i]) {
+					i = sep + 1
 				} else {
-					f.CellFormat(w, h, s[j:sep], "", 2, "", false, link, linkStr)
+					i = sep
 				}
-				i = sep + 1
 			}
 			sep = -1
 			j = i
@@ -2881,11 +2874,7 @@ func (f *Fpdf) write(h float64, txtStr string, link int, linkStr string) {
 	}
 	// Last chunk
 	if i != j {
-		if f.isCurrentUTF8 {
-			f.CellFormat(l/1000*f.fontSize, h, string([]rune(s)[j:]), "", 0, "", false, link, linkStr)
-		} else {
-			f.CellFormat(l/1000*f.fontSize, h, s[j:], "", 0, "", false, link, linkStr)
-		}
+		f.CellFormat(l/1000*f.fontSize, h, string([]rune(s)[j:]), "", 0, "", false, link, linkStr)
 	}
 }
 
