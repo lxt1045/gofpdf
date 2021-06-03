@@ -519,8 +519,8 @@ func (utf *utf8FontFile) generateCMAP() map[int][]int {
 		return nil
 	}
 
-	symbolCharDictionary := make(map[int][]int)
-	charSymbolDictionary := make(map[int]int)
+	symbolCharDictionary := make(map[int][]int, 2<<15)
+	charSymbolDictionary := make(map[int]int, 2<<15)
 	utf.generateSCCSDictionaries(runeCmapPosition, symbolCharDictionary, charSymbolDictionary)
 
 	utf.charSymbolDictionary = charSymbolDictionary

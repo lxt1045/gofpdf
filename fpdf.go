@@ -1814,6 +1814,16 @@ func (f *Fpdf) AddUTF8FontFromBytes(familyStr, styleStr string, utf8Bytes []byte
 	f.addFontFromBytes(fontFamilyEscape(familyStr), styleStr, nil, nil, utf8Bytes)
 }
 
+func (f *Fpdf) AddFontFromFpdf(from *Fpdf) {
+	f.fonts = make(map[string]fontDefType)
+	for k, v := range from.fonts {
+		v.usedRunes = make(map[int]int)
+		f.fonts[k] = v
+	}
+	f.diffs = from.diffs
+	f.fontFiles = from.fontFiles
+}
+
 func (f *Fpdf) addFontFromBytes(familyStr, styleStr string, jsonFileBytes, zFileBytes, utf8Bytes []byte) {
 	if f.err != nil {
 		return
